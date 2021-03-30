@@ -4,6 +4,9 @@ mod render;
 extern crate ash;
 extern crate ash_window;
 
+#[macro_use]
+extern crate lazy_static;
+
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -13,6 +16,7 @@ use winit::{
 use render::*;
 
 pub fn setupLogging() {
+    
     let colors_line = fern::colors::ColoredLevelConfig::new()
         .error(fern::colors::Color::Red)
         .warn(fern::colors::Color::Yellow)

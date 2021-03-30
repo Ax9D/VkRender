@@ -1,15 +1,19 @@
 use std::{error::Error, sync::Arc};
 
-use ash::{extensions::khr::Surface, version::DeviceV1_0, vk::{self, CompositeAlphaFlagsKHR, ImageUsageFlags, SharingMode}};
+use ash::{
+    extensions::khr::Surface,
+    version::DeviceV1_0,
+    vk::{self, CompositeAlphaFlagsKHR, ImageUsageFlags, SharingMode},
+};
 use winit::window::Window;
 
-use super::{Device, PhysicalDevice, device::SwapchainSupportDetails};
+use super::{device::SwapchainSupportDetails, Device, PhysicalDevice};
 pub struct Swapchain {
     device: Arc<super::Device>,
     inner: vk::SwapchainKHR,
     loader: ash::extensions::khr::Swapchain,
     images: Vec<vk::Image>,
-    imageViews: Vec<vk::ImageView>
+    imageViews: Vec<vk::ImageView>,
 }
 // pub struct SwapchainConfig {
 //     width: u32,
@@ -20,18 +24,19 @@ pub struct Swapchain {
 impl Swapchain {
     fn choosePresentMode(swapchainSupportDetails: &SwapchainSupportDetails) -> vk::PresentModeKHR {
         let mailboxPresentMode = swapchainSupportDetails
-        .presentModes()
-        .iter()
-        .find(|&&mode| mode == vk::PresentModeKHR::MAILBOX);
+            .presentModes()
+            .iter()
+            .find(|&&mode| mode == vk::PresentModeKHR::MAILBOX);
 
-    if mailboxPresentMode.is_none() {
-        vk::PresentModeKHR::FIFO
-    } else {
-        vk::PresentModeKHR::MAILBOX
+        if mailboxPresentMode.is_none() {
+            vk::PresentModeKHR::FIFO
+        } else {
+            vk::PresentModeKHR::MAILBOX
+        }
     }
-    }
-    fn chooseSurfaceFormat(swapchainSupportDetails: &SwapchainSupportDetails) -> Result<ash::vk::SurfaceFormatKHR, Box<dyn Error>> {
-
+    fn chooseSurfaceFormat(
+        swapchainSupportDetails: &SwapchainSupportDetails,
+    ) -> Result<ash::vk::SurfaceFormatKHR, Box<dyn Error>> {
         let hdrBGRAFormat = swapchainSupportDetails.formats().iter().find(|format| {
             format.format == vk::Format::B8G8R8A8_SRGB
                 && format.color_space == vk::ColorSpaceKHR::SRGB_NONLINEAR
@@ -41,9 +46,7 @@ impl Swapchain {
             return Err("Physical device doesn't support HDR framebuffers".into());
         }
 
-        Ok (
-            *hdrBGRAFormat.unwrap()
-        )
+        Ok(*hdrBGRAFormat.unwrap())
     }
     pub(super) fn create(
         instance: &ash::Instance,
@@ -56,10 +59,9 @@ impl Swapchain {
         unsafe {
             let swapchainSupportDetails = pdevice.swapchainSupportDetails();
 
-
             let presentMode = Self::choosePresentMode(&swapchainSupportDetails);
 
-            let surfaceFormat = Self::chooseSurfaceFormat(&swapchainSupportDetails)?;            
+            let surfaceFormat = Self::chooseSurfaceFormat(&swapchainSupportDetails)?;
 
             let swapExtent = Self::chooseSwapExtent(swapchainSupportDetails.capabilities(), window);
 
@@ -110,26 +112,26 @@ impl Swapchain {
                 inner: swapchain,
                 loader: swapchainLoader,
                 images,
-                imageViews
+                imageViews,
             })
         }
     }
-    fn createImageViews(device: &Arc<super::Device>, images: &Vec<vk::Image>,  format: vk::Format) -> Result<Vec<vk::ImageView>, Box<dyn Error>>{
-        
+    fn createImageViews(
+        device: &Arc<super::Device>,
+        images: &Vec<vk::Image>,
+        format: vk::Format,
+    ) -> Result<Vec<vk::ImageView>, Box<dyn Error>> {
         let mut imageViews = Vec::new();
 
         for image in images {
             imageViews.push(super::ImageView::default(device, image, format)?);
         }
-        Ok(
-            imageViews
-        )
+        Ok(imageViews)
     }
     fn chooseSwapExtent(
         capabilities: &vk::SurfaceCapabilitiesKHR,
         window: &Window,
     ) -> vk::Extent2D {
-
         log::info!("{:?}", window.inner_size());
 
         if capabilities.current_extent.width != u32::MAX {
@@ -152,10 +154,10 @@ impl Swapchain {
 impl Drop for Swapchain {
     fn drop(&mut self) {
         unsafe {
-            self.imageViews.iter().for_each(|&imageView| {
-                self.device.rawDevice().destroy_image_view(imageView, None)
-            });
-            
+            self.imageViews
+                .iter()
+                .for_each(|&imageView| self.device.rawDevice().destroy_image_view(imageView, None));
+
             self.loader.destroy_swapchain(self.inner, None);
         }
     }

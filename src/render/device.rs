@@ -113,7 +113,7 @@ impl PhysicalDeviceInfo {
             presentQueueIx: self.presentQueue.unwrap(),
             inner: self.device,
             swapchainSupportDetails: self.swapchainSupportDetails,
-            properties: self.properties
+            properties: self.properties,
         }
     }
 }
@@ -157,7 +157,7 @@ pub struct PhysicalDevice {
     graphicsQueueIx: usize,
     presentQueueIx: usize,
     swapchainSupportDetails: SwapchainSupportDetails,
-    properties: ash::vk::PhysicalDeviceProperties
+    properties: ash::vk::PhysicalDeviceProperties,
 }
 pub struct GPUProperties<'a> {
     name: &'a str,
@@ -177,15 +177,12 @@ impl PhysicalDevice {
     pub fn swapchainSupportDetails(&self) -> &SwapchainSupportDetails {
         &self.swapchainSupportDetails
     }
-    pub fn getGPUProperties(&self) -> GPUProperties{
-
-        let name=unsafe { 
+    pub fn getGPUProperties(&self) -> GPUProperties {
+        let name = unsafe {
             let weirdness = &self.properties.device_name as *const i8;
             CStr::from_ptr(weirdness).to_str().unwrap()
-         };
-        GPUProperties {
-            name,
-        }
+        };
+        GPUProperties { name }
     }
     pub fn rawDevice(&self) -> vk::PhysicalDevice {
         self.inner

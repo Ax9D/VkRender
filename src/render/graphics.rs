@@ -10,7 +10,12 @@ use ash::{
 use ash::{version::EntryV1_0, vk::make_version};
 use winit::window::Window;
 
-use std::{borrow::Cow, error::Error, ffi::{CStr, CString}, sync::Arc};
+use std::{
+    borrow::Cow,
+    error::Error,
+    ffi::{CStr, CString},
+    sync::Arc,
+};
 
 use super::PhysicalDevice;
 
@@ -235,7 +240,7 @@ impl Gfx {
         let pdevice = Self::pickPhysicalDevice(&entry, &instance, surface, &surfaceLoader)?;
 
         log::debug!("Created physical device");
-        log::info!("{}",pdevice.getGPUProperties().name());
+        log::info!("{}", pdevice.getGPUProperties().name());
 
         let device = Arc::new(super::Device::create(&instance, &pdevice)?);
 

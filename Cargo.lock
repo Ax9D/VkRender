@@ -6,13 +6,16 @@ version = "0.1.0"
 dependencies = [
  "ash",
  "ash-window",
+ "c_str_macro",
  "chrono",
  "crossterm",
  "fern",
  "gpu-allocator",
+ "lazy_static",
  "log",
  "shaderc",
  "spirv-reflect",
+ "thiserror",
  "winit",
 ]
 
@@ -112,6 +115,12 @@ name = "block"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a"
+
+[[package]]
+name = "c_str_macro"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f2e08268d37bbcbf98f70312c449a35763d3f85beafbedbb4e28b4c438e2b5bd"
 
 [[package]]
 name = "calloop"
