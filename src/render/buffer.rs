@@ -1,3 +1,3 @@
-pub struct Buffer {
-    
-}
+pub struct Buffer {}
+
+pub struct VertexBufferLayout {}

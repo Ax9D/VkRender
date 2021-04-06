@@ -16,7 +16,6 @@ use winit::{
 use render::*;
 
 pub fn setupLogging() {
-    
     let colors_line = fern::colors::ColoredLevelConfig::new()
         .error(fern::colors::Color::Red)
         .warn(fern::colors::Color::Yellow)

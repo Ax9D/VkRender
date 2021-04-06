@@ -34,8 +34,12 @@ pub mod ImageView {
             .components(RGBASWIZZLE)
             .subresource_range(subresourceRange);
 
-        let imageView = unsafe { device.rawDevice().create_image_view(&createInfo, None)? };
+        let imageView = unsafe { device.raw().create_image_view(&createInfo, None)? };
 
         Ok(imageView)
     }
+}
+
+pub mod Image {
+    
 }

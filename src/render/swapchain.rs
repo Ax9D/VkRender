@@ -73,8 +73,7 @@ impl Swapchain {
                 imageCount = swapchainSupportDetails.capabilities().max_image_count;
             }
 
-            let swapchainLoader =
-                ash::extensions::khr::Swapchain::new(instance, device.rawDevice());
+            let swapchainLoader = ash::extensions::khr::Swapchain::new(instance, device.raw());
 
             let mut swapchainCreateInfo = vk::SwapchainCreateInfoKHR::builder()
                 .surface(surface)
@@ -156,7 +155,7 @@ impl Drop for Swapchain {
         unsafe {
             self.imageViews
                 .iter()
-                .for_each(|&imageView| self.device.rawDevice().destroy_image_view(imageView, None));
+                .for_each(|&imageView| self.device.raw().destroy_image_view(imageView, None));
 
             self.loader.destroy_swapchain(self.inner, None);
         }

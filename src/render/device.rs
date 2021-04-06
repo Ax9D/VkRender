@@ -1,11 +1,12 @@
-use std::{collections::HashSet, error::Error, ffi::CStr, ptr::swap};
+use std::{collections::HashSet, error::Error, ffi::CStr, ptr::swap, sync::{Arc, Mutex}};
 
 use ash::{
     extensions::khr::{Surface, Swapchain},
     version::{DeviceV1_0, InstanceV1_0},
     vk::{self, GraphicsShaderGroupCreateInfoNV},
-    Instance,
+    Entry, Instance,
 };
+use gpu_allocator::VulkanAllocator;
 
 use super::graphics;
 
@@ -168,6 +169,49 @@ impl<'a> GPUProperties<'a> {
     }
 }
 impl PhysicalDevice {
+    pub fn pickOptimal(
+        entry: &Entry,
+        instance: &Instance,
+        surface: vk::SurfaceKHR,
+        surfaceLoader: &Surface,
+    ) -> Result<PhysicalDevice, Box<dyn Error>> {
+        let devices = unsafe { instance.enumerate_physical_devices()? };
+        use super::device::PhysicalDeviceInfo;
+
+        let requiredExtensions = [Swapchain::name()];
+
+        let deviceInfos: Vec<_> = devices
+            .iter()
+            .map(|device| {
+                PhysicalDeviceInfo::processDevice(
+                    *device,
+                    instance,
+                    &surface,
+                    &surfaceLoader,
+                    &requiredExtensions,
+                )
+                .unwrap()
+            })
+            .collect();
+
+        let pickedDeviceInfo = {
+            let mut pppppp = None;
+            for device in deviceInfos {
+                if device.isSuitable() {
+                    pppppp.replace(device);
+                    break;
+                }
+            }
+            pppppp
+        };
+
+        if let Some(deviceInfo) = pickedDeviceInfo {
+            Ok(deviceInfo.toPhysicalDevice())
+        } else {
+            Err("Failed to find a suitable device".into())
+        }
+    }
+
     pub fn graphicsQueueIndex(&self) -> usize {
         self.graphicsQueueIx
     }
@@ -195,12 +239,13 @@ impl Drop for PhysicalDevice {
 
 pub struct Device {
     inner: ash::Device,
+    allocator: Mutex<VulkanAllocator>,
 }
 impl Device {
     pub(super) fn create(
         instance: &ash::Instance,
         physicalDevice: &PhysicalDevice,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> Result<Arc<Self>, Box<dyn Error>> {
         const priorities: [f32; 1] = [1.0];
 
         let mut uniqueQueues = HashSet::new();
@@ -231,9 +276,26 @@ impl Device {
         let presentQueue =
             unsafe { inner.get_device_queue(physicalDevice.presentQueueIndex() as u32, 0) };
 
-        Ok(Self { inner })
+        use gpu_allocator::*;
+
+        let allocator = Mutex::new(VulkanAllocator::new(&VulkanAllocatorCreateDesc{
+            instance: instance.clone(),
+            device: inner.clone(),
+            physical_device: physicalDevice.rawDevice(),
+            debug_settings: Default::default(), 
+        }));
+
+        Ok(Arc::new(Self { inner, allocator }))
     }
-    pub fn rawDevice(&self) -> &ash::Device {
+    pub (crate) fn allocateDeviceMemory(&self, desc: gpu_allocator::AllocationCreateDesc) -> gpu_allocator::Result<gpu_allocator::SubAllocation> {
+        self.allocator.lock().unwrap()
+        .allocate(&desc)
+    }
+    pub (crate) fn freeDeviceMemory(&self, alloc: gpu_allocator::SubAllocation) -> gpu_allocator::Result<()> {
+        self.allocator.lock().unwrap()
+        .free(alloc)
+    }
+    pub fn raw(&self) -> &ash::Device {
         &self.inner
     }
     pub(super) fn getDeviceQueue(&self, index: usize) -> vk::Queue {

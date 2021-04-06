@@ -168,48 +168,6 @@ impl Gfx {
     ) -> Result<vk::SurfaceKHR, Box<dyn Error>> {
         Ok(unsafe { ash_window::create_surface(entry, instance, window, None)? })
     }
-    fn pickPhysicalDevice(
-        entry: &Entry,
-        instance: &Instance,
-        surface: vk::SurfaceKHR,
-        surfaceLoader: &Surface,
-    ) -> Result<PhysicalDevice, Box<dyn Error>> {
-        let devices = unsafe { instance.enumerate_physical_devices()? };
-        use super::device::PhysicalDeviceInfo;
-
-        let requiredExtensions = [Swapchain::name()];
-
-        let deviceInfos: Vec<_> = devices
-            .iter()
-            .map(|device| {
-                PhysicalDeviceInfo::processDevice(
-                    *device,
-                    instance,
-                    &surface,
-                    &surfaceLoader,
-                    &requiredExtensions,
-                )
-                .unwrap()
-            })
-            .collect();
-
-        let pickedDeviceInfo = {
-            let mut pppppp = None;
-            for device in deviceInfos {
-                if device.isSuitable() {
-                    pppppp.replace(device);
-                    break;
-                }
-            }
-            pppppp
-        };
-
-        if let Some(deviceInfo) = pickedDeviceInfo {
-            Ok(deviceInfo.toPhysicalDevice())
-        } else {
-            Err("Failed to find a suitable device".into())
-        }
-    }
     // fn createLogicalDevice(
     //     instance: &Instance,
     //     physicalDevice: vk::PhysicalDevice,
@@ -237,12 +195,12 @@ impl Gfx {
 
         let surfaceLoader = Surface::new(&entry, &instance);
 
-        let pdevice = Self::pickPhysicalDevice(&entry, &instance, surface, &surfaceLoader)?;
+        let pdevice = PhysicalDevice::pickOptimal(&entry, &instance, surface, &surfaceLoader)?;
 
         log::debug!("Created physical device");
         log::info!("{}", pdevice.getGPUProperties().name());
 
-        let device = Arc::new(super::Device::create(&instance, &pdevice)?);
+        let device = super::Device::create(&instance, &pdevice)?;
 
         log::debug!("Created logical device");
 
@@ -256,6 +214,48 @@ impl Gfx {
         )?;
 
         log::debug!("Created swapchain");
+
+        let vert = r"#version 450 core
+        #extension GL_ARB_separate_shader_objects : enable
+        
+        vec2 positions[3] = vec2[](
+            vec2(0.0, -0.5),
+            vec2(0.5, 0.5),
+            vec2(-0.5, 0.5)
+        );
+        
+        layout(location = 0) out vec3 fragColor;
+        void main() {
+            gl_Position = vec4(positions[gl_VertexIndex], 0.0,1.0);
+            fragColor = positions[gl_VertexIndex].xyx;
+        }";
+
+        let frag = r"#version 450 core
+        #extension GL_ARB_separate_shader_objects : enable
+        
+        layout(location = 0) out vec4 color;
+
+        layout(binding = 0) uniform sampler2D test;
+        
+        layout (location = 0) in vec3 fragColor;
+        void main() {
+            color = vec4(vec3(sin(fragColor.x), sin(fragColor.y), sin(fragColor.z)), 1.0);
+        }";
+
+        use super::shader::*;
+
+        let shader = Shader::create(
+            &device,
+            "test".into(),
+            ShaderCompileInfo {
+                entryPoint: "main".into(),
+                data: ShaderData::Source(vert.into()),
+            },
+            ShaderCompileInfo {
+                entryPoint: "main".into(),
+                data: ShaderData::Source(frag.into()),
+            },
+        )?;
 
         Ok(Self {
             entry,
