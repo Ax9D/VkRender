@@ -21,11 +21,11 @@ pub struct DepthStencilInput {
 pub struct ColorOutput {
     name: &'static str,
     layoutName: &'static str,
-    format: ColorFormat,
+    format: vk::Format,
 }
 pub struct DepthStencilOutput {
     name: &'static str,
-    format: DepthStencilFormat,
+    format: vk::Format,
 }
 
 use thiserror::Error;
@@ -45,11 +45,11 @@ pub struct RenderpassBuilder {
     pipeline: PipelineCreateInfo,
     drawState: Box<dyn DrawState>,
 
-    colorInputs: HashMap<&'static str, ColorInput>,
-    colorOutputs: HashMap<&'static str, ColorOutput>,
+    pub (super) colorInputs: HashMap<&'static str, ColorInput>,
+    pub (super) colorOutputs: HashMap<&'static str, ColorOutput>,
 
-    depthInput: Option<DepthStencilInput>,
-    depthOutput: Option<DepthStencilOutput>,
+    pub (super) depthInput: Option<DepthStencilInput>,
+    pub (super) depthOutput: Option<DepthStencilOutput>,
 }
 
 impl RenderpassBuilder {
@@ -94,7 +94,7 @@ impl RenderpassBuilder {
             ColorOutput {
                 name,
                 layoutName,
-                format,
+                format: format.into(),
             },
         );
 
@@ -116,7 +116,7 @@ impl RenderpassBuilder {
         format: DepthStencilFormat,
     ) -> &mut Self {
         self.depthOutput
-            .replace(DepthStencilOutput { name, format });
+            .replace(DepthStencilOutput { name, format: format.into() });
 
         self
     }
@@ -209,12 +209,24 @@ impl RenderpassBuilder {
         Ok(
             Renderpass {
                 data: self.validate()?,
-                framebuffer: vk::Framebuffer::null()
             }
         )
     }
 }
 pub struct Renderpass {
     data: RenderpassBuilder,
-    framebuffer: vk::Framebuffer,
+}
+impl Renderpass {
+    pub fn colorInputs(&self) -> &HashMap<&'static str, ColorInput> {
+        &self.data.colorInputs
+    } 
+    pub fn colorOutputs(&self) -> &HashMap<&'static str, ColorOutput> {
+        &self.data.colorOutputs
+    }
+    pub fn depthInput(&self) -> Option<&DepthStencilInput> {
+        self.data.depthInput.as_ref()
+    }
+    pub fn depthOutput(&self) -> Option<&DepthStencilOutput> {
+        self.data.depthOutput.as_ref()
+    }
 }
